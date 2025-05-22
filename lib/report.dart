@@ -7,8 +7,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'google_drive_service.dart';
 
-final GlobalKey<ScaffoldMessengerState> _scaffoldMessengerKey =
-    GlobalKey<ScaffoldMessengerState>();
+final GlobalKey<ScaffoldMessengerState> _scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
 
 class ReportPageWidget extends StatefulWidget {
   const ReportPageWidget({super.key});
@@ -26,7 +25,7 @@ class _ReportPageWidgetState extends State<ReportPageWidget> {
   final FlutterSoundPlayer _player = FlutterSoundPlayer();
   String? _audioPath;
   bool _isRecording = false;
-  bool _isSubmitting = false; // Add loading state
+  bool _isSubmitting = false;
 
   @override
   void initState() {
@@ -68,8 +67,7 @@ class _ReportPageWidgetState extends State<ReportPageWidget> {
   }
 
   Future<void> _pickImage() async {
-    final pickedFile =
-        await ImagePicker().pickImage(source: ImageSource.camera);
+    final pickedFile = await ImagePicker().pickImage(source: ImageSource.camera);
     if (pickedFile != null) {
       setState(() {
         _image = File(pickedFile.path);
@@ -83,14 +81,12 @@ class _ReportPageWidgetState extends State<ReportPageWidget> {
       _showSnackBar('Location permission required', Colors.red);
       return;
     }
-    Position position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high);
+    Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
     setState(() {
       _currentPosition = position;
     });
   }
 
-  /// Fetches the latest case ID from Firestore and generates the next case ID
   Future<String> _getNextCaseId() async {
     var reports = await FirebaseFirestore.instance
         .collection('reports')
@@ -110,108 +106,76 @@ class _ReportPageWidgetState extends State<ReportPageWidget> {
   Future<void> _submitReport() async {
     if (_isSubmitting) return;
 
-    setState(() {
-      _isSubmitting = true;
-    });
+    if (_formKey.currentState!.validate() && _image != null && _currentPosition != null) {
+      setState(() {
+        _isSubmitting = true;
+      });
 
-    try {
-      if (_image == null && _audioPath == null) {
-        _showSnackBar(
-            'Please capture an image or record an audio.', Colors.red);
-        return;
-      }
+      try {
+        String caseId = await _getNextCaseId();
+        GoogleDriveService googleDriveService = GoogleDriveService();
+        await googleDriveService.authenticateWithGoogleDrive();
+        String folderUrl = await googleDriveService.createCaseFolder(caseId);
+        String folderId = folderUrl.split('/folders/')[1];
 
-      print('Fetching next case ID...');
-      String caseId = await _getNextCaseId();
-      print('Generated case ID: $caseId');
-
-      GoogleDriveService googleDriveService = GoogleDriveService();
-
-      print('Authenticating with Google Drive...');
-      await googleDriveService.authenticateWithGoogleDrive();
-
-      print('Creating Google Drive folder for case ID: $caseId');
-      String folderUrl = await googleDriveService.createCaseFolder(caseId);
-      print('Created folder with URL: $folderUrl');
-
-      String folderId = folderUrl.split('/folders/')[1];
-      print('Extracted folder ID: $folderId');
-
-      String? imageUrl;
-      String? audioUrl;
-      if (_image != null) {
-        print('Uploading image: ${_image!.path}');
-        try {
-          imageUrl = await googleDriveService.uploadFileToCaseFolder(
-              _image!, folderId);
-          print('Image uploaded successfully: $imageUrl');
-        } catch (e) {
-          _showSnackBar('Failed to upload image: $e', Colors.red);
-          return;
-        }
-      }
-      if (_audioPath != null) {
-        File audioFile = File(_audioPath!);
-        if (await audioFile.exists()) {
-          print('Uploading audio: ${_audioPath}');
-          try {
-            audioUrl = await googleDriveService.uploadFileToCaseFolder(
-                audioFile, folderId);
-            print('Audio uploaded successfully: $audioUrl');
-          } catch (e) {
-            _showSnackBar('Failed to upload audio: $e', Colors.red);
+        String? imageUrl;
+        String? audioUrl;
+        imageUrl = await googleDriveService.uploadFileToCaseFolder(_image!, folderId);
+        if (_audioPath != null) {
+          File audioFile = File(_audioPath!);
+          if (await audioFile.exists()) {
+            audioUrl = await googleDriveService.uploadFileToCaseFolder(audioFile, folderId);
+          } else {
+            _showSnackBar('Audio file not found.', Colors.red);
             return;
           }
-        } else {
-          _showSnackBar('Audio file not found.', Colors.red);
-          return;
         }
+
+        await FirebaseFirestore.instance.collection('reports').doc(caseId).set({
+          'caseId': caseId,
+          'folderUrl': folderUrl,
+          'imageUrl': imageUrl,
+          'audioUrl': audioUrl,
+          'category': _selectedCategory,
+          'description': _descriptionController.text.trim(),
+          'location': {
+            'latitude': _currentPosition!.latitude,
+            'longitude': _currentPosition!.longitude,
+          },
+          'timestamp': FieldValue.serverTimestamp(),
+          'status': 'Unsolved',
+        });
+
+        setState(() {
+          _image = null;
+          _audioPath = null;
+          _isRecording = false;
+          _selectedCategory = null;
+          _descriptionController.clear();
+          _currentPosition = null;
+        });
+
+        _scaffoldMessengerKey.currentState?.showSnackBar(
+          SnackBar(
+            content: Text('Report submitted successfully!'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 3),
+          ),
+        );
+      } catch (e) {
+        _showSnackBar('Error submitting report: $e', Colors.red);
+      } finally {
+        setState(() {
+          _isSubmitting = false;
+        });
       }
-
-      print('Saving report to Firestore with case ID: $caseId');
-      await FirebaseFirestore.instance.collection('reports').doc(caseId).set({
-        'caseId': caseId,
-        'folderUrl': folderUrl,
-        'imageUrl': imageUrl,
-        'audioUrl': audioUrl,
-        'category': _selectedCategory,
-        'description': _descriptionController.text,
-        'location': _currentPosition != null
-            ? {
-                'latitude': _currentPosition!.latitude,
-                'longitude': _currentPosition!.longitude,
-              }
-            : null,
-        'timestamp': FieldValue.serverTimestamp(),
-        'status': 'Unsolved',
-      });
-      print('Report saved to Firestore successfully.');
-
-      // Reset the form
-      setState(() {
-        _image = null;
-        _audioPath = null;
-        _isRecording = false;
-        _selectedCategory = null;
-        _descriptionController.clear();
-        _currentPosition = null;
-      });
-
-      // Show success message
-      _scaffoldMessengerKey.currentState?.showSnackBar(
-        const SnackBar(
-          content: Text('Report submitted successfully!'),
-          backgroundColor: Colors.green,
-          duration: Duration(seconds: 2),
-        ),
-      );
-    } catch (e) {
-      print('Error submitting report: $e');
-      _showSnackBar('Error submitting report: $e', Colors.red);
-    } finally {
-      setState(() {
-        _isSubmitting = false;
-      });
+    } else {
+      if (_image == null) {
+        _showSnackBar('Please capture an image.', Colors.red);
+      }
+      if (_currentPosition == null) {
+        _showSnackBar('Please share your location.', Colors.red);
+      }
     }
   }
 
@@ -220,101 +184,213 @@ class _ReportPageWidgetState extends State<ReportPageWidget> {
       SnackBar(
         content: Text(message),
         backgroundColor: color,
-        duration: const Duration(seconds: 2),
+        duration: Duration(seconds: 3),
       ),
     );
   }
 
-  @override
+  final _formKey = GlobalKey<FormState>();
+
   @override
   Widget build(BuildContext context) {
     return ScaffoldMessenger(
       key: _scaffoldMessengerKey,
       child: Scaffold(
-        appBar: AppBar(title: const Text('Report an Incident')),
+        appBar: AppBar(
+          title: Text('Report an Incident'),
+          backgroundColor: Colors.blue,
+          elevation: 0,
+          centerTitle: true,
+        ),
         body: SingleChildScrollView(
-          padding: const EdgeInsets.all(20.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
+          padding: EdgeInsets.all(16.0),
+          child: Card(
+            elevation: 5,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(15),
+            ),
+            child: Padding(
+              padding: EdgeInsets.all(16.0),
+              child: Form(
+                key: _formKey,
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _image != null
-                        ? Image.file(_image!,
-                            height: 150, width: 150, fit: BoxFit.cover)
-                        : const Text('No image selected'),
-                    ElevatedButton(
-                        onPressed: _pickImage,
-                        child: const Icon(Icons.camera_alt)),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        ElevatedButton(
-                          onPressed: _recordAudio,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor:
-                                _isRecording ? Colors.red : Colors.yellow,
+                    Container(
+                      width: double.infinity,
+                      padding: EdgeInsets.symmetric(vertical: 20),
+                      color: Colors.blue,
+                      child: Column(
+                        children: [
+                          Icon(
+                            Icons.report,
+                            color: Colors.white,
+                            size: 50,
                           ),
-                          child: const Icon(Icons.mic),
-                        ),
-                        if (_audioPath != null)
+                          SizedBox(height: 10),
+                          Text(
+                            'Report an Incident',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    SizedBox(height: 16),
+                    Center(
+                      child: Column(
+                        children: [
+                          _image != null
+                              ? ClipRRect(
+                                  borderRadius: BorderRadius.circular(10),
+                                  child: Image.file(_image!, height: 150, width: 150, fit: BoxFit.cover),
+                                )
+                              : Text('No image selected', style: TextStyle(color: Colors.grey)),
+                          SizedBox(height: 12),
                           ElevatedButton(
-                            onPressed: () async {
-                              await _player.startPlayer(fromURI: _audioPath);
-                            },
-                            child: const Icon(Icons.play_arrow),
+                            onPressed: _pickImage,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.blue,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                            ),
+                            child: Icon(Icons.camera_alt, color: Colors.white),
                           ),
-                      ],
+                          SizedBox(height: 12),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              ElevatedButton(
+                                onPressed: _recordAudio,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: _isRecording ? Colors.red : Colors.blue,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                ),
+                                child: Icon(_isRecording ? Icons.stop : Icons.mic, color: Colors.white),
+                              ),
+                              if (_audioPath != null) SizedBox(width: 12),
+                              if (_audioPath != null)
+                                ElevatedButton(
+                                  onPressed: () async {
+                                    await _player.startPlayer(fromURI: _audioPath);
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.blue,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                  ),
+                                  child: Icon(Icons.play_arrow, color: Colors.white),
+                                ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    SizedBox(height: 16),
+                    DropdownButtonFormField<String>(
+                      value: _selectedCategory,
+                      items: [
+                        'Animal Abuse',
+                        'Animal Accident',
+                        'Animal Health Issue',
+                        'Wild Animal'
+                      ]
+                          .map((category) => DropdownMenuItem(value: category, child: Text(category)))
+                          .toList(),
+                      onChanged: (value) {
+                        setState(() {
+                          _selectedCategory = value;
+                        });
+                      },
+                      decoration: InputDecoration(
+                        labelText: 'Select Category',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        filled: true,
+                        fillColor: Colors.grey[100],
+                      ),
+                      validator: (value) {
+                        if (value == null) {
+                          return 'Please select a category';
+                        }
+                        return null;
+                      },
+                    ),
+                    SizedBox(height: 16),
+                    TextFormField(
+                      controller: _descriptionController,
+                      maxLines: 3,
+                      decoration: InputDecoration(
+                        labelText: 'Description',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        filled: true,
+                        fillColor: Colors.grey[100],
+                      ),
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Please enter a description';
+                        }
+                        return null;
+                      },
+                    ),
+                    SizedBox(height: 16),
+                    ElevatedButton.icon(
+                      onPressed: _getLocation,
+                      icon: Icon(Icons.location_on, color: Colors.white),
+                      label: Text(
+                        _currentPosition != null
+                            ? 'Location: (${_currentPosition!.latitude.toStringAsFixed(4)}, ${_currentPosition!.longitude.toStringAsFixed(4)})'
+                            : 'Share Location',
+                        style: TextStyle(color: Colors.white),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blue,
+                        padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: 20),
+                    Center(
+                      child: ElevatedButton(
+                        onPressed: _isSubmitting ? null : _submitReport,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.blue,
+                          padding: EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                        child: _isSubmitting
+                            ? SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : Text(
+                                'Submit Report',
+                                style: TextStyle(fontSize: 16, color: Colors.white),
+                              ),
+                      ),
                     ),
                   ],
                 ),
               ),
-              DropdownButtonFormField<String>(
-                value: _selectedCategory,
-                items: [
-                  'Animal Abuse',
-                  'Animal Accident',
-                  'Animal Health Issue',
-                  'Wild Animal'
-                ]
-                    .map((category) => DropdownMenuItem(
-                        value: category, child: Text(category)))
-                    .toList(),
-                onChanged: (value) {
-                  setState(() {
-                    _selectedCategory = value;
-                  });
-                },
-                decoration: const InputDecoration(labelText: 'Select Category'),
-              ),
-              TextField(
-                controller: _descriptionController,
-                maxLines: 3,
-                decoration: const InputDecoration(
-                    labelText: 'Description', border: OutlineInputBorder()),
-              ),
-              ElevatedButton.icon(
-                onPressed: _getLocation,
-                icon: const Icon(Icons.location_on),
-                label: Text(_currentPosition != null
-                    ? 'Location: (${_currentPosition!.latitude}, ${_currentPosition!.longitude})'
-                    : 'Share Location'),
-              ),
-              ElevatedButton(
-                onPressed: _isSubmitting ? null : _submitReport,
-                child: _isSubmitting
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(
-                          color: Colors.white,
-                          strokeWidth: 2,
-                        ),
-                      )
-                    : const Text('Submit Report'),
-              ),
-            ],
+            ),
           ),
         ),
       ),

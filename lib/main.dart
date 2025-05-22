@@ -2,7 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:google_fonts/google_fonts.dart'; // Added this import
+import 'package:google_fonts/google_fonts.dart';
 import 'firebase_options.dart';
 import 'ngo_login.dart';
 import 'admin_login.dart';
@@ -54,16 +54,14 @@ class HomePageWidget extends StatelessWidget {
           Container(
             decoration: const BoxDecoration(
               image: DecorationImage(
-                image: AssetImage('assets/images/background.jpg'), // Replace with your image path
+                image: AssetImage('assets/images/background.jpg'), 
                 fit: BoxFit.cover,
               ),
             ),
           ),
-          // Semi-transparent overlay for readability
           Container(
             color: Colors.black.withOpacity(0.4),
           ),
-          // Main content
           Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,

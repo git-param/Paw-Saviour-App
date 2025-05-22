@@ -1,7 +1,5 @@
-// ngo_login.dart
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -46,70 +44,108 @@ class _NGOLoginPageState extends State<NGOLoginPage> {
           .limit(1)
           .get();
 
-      if (querySnapshot.docs.isEmpty) {
-        throw Exception('No approved NGO found with this email');
-      }
+      if (querySnapshot.docs.isEmpty) throw Exception('No approved NGO found with this email');
 
       final doc = querySnapshot.docs.first;
       final data = doc.data();
-      if (data['password'] != password) {
-        throw Exception('Incorrect password');
-      }
+      if (data['password'] != password) throw Exception('Incorrect password');
 
       final ngoName = doc.id;
 
-      Navigator.pushReplacementNamed(
-        context,
-        '/ngo_dashboard',
-        arguments: ngoName,
-      );
+      Navigator.pushReplacementNamed(context, '/ngo_dashboard', arguments: ngoName);
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Login failed: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Login failed: $e'),
+          backgroundColor: Colors.red,
+          duration: Duration(seconds: 3),
+        ),
+      );
     } finally {
       setState(() => _isLoading = false);
     }
   }
 
-  Future<void> _contactAdminForPassword() async {
-    final Uri emailUri = Uri(
-      scheme: 'mailto',
-      path: 'paramdholakia1@gmail.com',
-      queryParameters: {
-        'subject': 'Paw Saviour: NGO Password Reset Request',
-        'body':
-            'Dear Admin,\n\nI have forgotten my password for the Paw Saviour app. My email is ${_emailController.text.trim()}. Please assist me with resetting my password.\n\nThank you,\n[Your Name]',
-      },
-    );
+  Future<void> _requestPasswordReset() async {
+    final String email = _emailController.text.trim();
+    if (email.isEmpty || !RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Please enter a valid email'),
+          backgroundColor: Colors.red,
+          duration: Duration(seconds: 3),
+        ),
+      );
+      return;
+    }
 
-    if (await canLaunchUrl(emailUri)) {
-      await launchUrl(emailUri);
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not open email client')));
+    try {
+      await FirebaseFirestore.instance.collection('password_reset_requests').doc(email).set({
+        'email': email,
+        'timestamp': FieldValue.serverTimestamp(),
+        'status': 'pending',
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Password reset request submitted. Admin will contact you.'),
+          backgroundColor: Colors.green,
+          duration: Duration(seconds: 4),
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error submitting request: $e'),
+          backgroundColor: Colors.red,
+          duration: Duration(seconds: 4),
+        ),
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.blue,
+      backgroundColor: Colors.blue.shade700,
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24.0),
+            padding: EdgeInsets.symmetric(horizontal: 24.0),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.pets, size: 80, color: Colors.white),
-                const SizedBox(height: 16),
-                Text('NGO Login', style: GoogleFonts.inter(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.white)),
-                const SizedBox(height: 8),
-                Text('Login to your NGO account', style: GoogleFonts.inter(fontSize: 16, color: Colors.white70)),
-                const SizedBox(height: 32),
+                Icon(Icons.pets, size: 90, color: Colors.white),
+                SizedBox(height: 20),
+                Text(
+                  'NGO Login',
+                  style: GoogleFonts.inter(
+                    fontSize: 34,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+                SizedBox(height: 10),
+                Text(
+                  'Login to your NGO account',
+                  style: GoogleFonts.inter(
+                    fontSize: 16,
+                    color: Colors.white70,
+                  ),
+                ),
+                SizedBox(height: 40),
                 Container(
-                  padding: const EdgeInsets.all(24.0),
+                  padding: EdgeInsets.all(24.0),
                   decoration: BoxDecoration(
                     color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black12,
+                        blurRadius: 10,
+                        offset: Offset(0, 4),
+                      ),
+                    ],
                   ),
                   child: Form(
                     key: _formKey,
@@ -118,10 +154,14 @@ class _NGOLoginPageState extends State<NGOLoginPage> {
                         TextFormField(
                           controller: _emailController,
                           focusNode: _emailFocusNode,
-                          decoration: const InputDecoration(
+                          decoration: InputDecoration(
                             labelText: 'Email',
-                            prefixIcon: Icon(Icons.email),
-                            border: OutlineInputBorder(),
+                            prefixIcon: Icon(Icons.email, color: Colors.blue),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            filled: true,
+                            fillColor: Colors.grey[100],
                           ),
                           keyboardType: TextInputType.emailAddress,
                           textInputAction: TextInputAction.next,
@@ -134,18 +174,25 @@ class _NGOLoginPageState extends State<NGOLoginPage> {
                             return null;
                           },
                         ),
-                        const SizedBox(height: 16),
+                        SizedBox(height: 20),
                         TextFormField(
                           controller: _passwordController,
                           focusNode: _passwordFocusNode,
                           decoration: InputDecoration(
                             labelText: 'Password',
-                            prefixIcon: const Icon(Icons.lock),
+                            prefixIcon: Icon(Icons.lock, color: Colors.blue),
                             suffixIcon: IconButton(
-                              icon: Icon(_obscurePassword ? Icons.visibility : Icons.visibility_off),
+                              icon: Icon(
+                                _obscurePassword ? Icons.visibility : Icons.visibility_off,
+                                color: Colors.blue,
+                              ),
                               onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
                             ),
-                            border: const OutlineInputBorder(),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            filled: true,
+                            fillColor: Colors.grey[100],
                           ),
                           obscureText: _obscurePassword,
                           textInputAction: TextInputAction.done,
@@ -156,26 +203,41 @@ class _NGOLoginPageState extends State<NGOLoginPage> {
                             return null;
                           },
                         ),
-                        const SizedBox(height: 16),
+                        SizedBox(height: 20),
                         Align(
                           alignment: Alignment.centerRight,
                           child: TextButton(
-                            onPressed: _contactAdminForPassword,
-                            child: Text('Forgot Password?', style: GoogleFonts.inter(color: Colors.blue)),
+                            onPressed: _requestPasswordReset,
+                            child: Text(
+                              'Forgot Password?',
+                              style: GoogleFonts.inter(
+                                color: Colors.blue.shade700,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
                           ),
                         ),
-                        const SizedBox(height: 16),
+                        SizedBox(height: 20),
                         _isLoading
-                            ? const SpinKitFadingCircle(color: Colors.blue, size: 50)
+                            ? SpinKitFadingCircle(color: Colors.blue.shade700, size: 50)
                             : ElevatedButton(
                                 onPressed: _loginNGO,
                                 style: ElevatedButton.styleFrom(
-                                  minimumSize: const Size(double.infinity, 50),
-                                  backgroundColor: Colors.blue,
+                                  minimumSize: Size(double.infinity, 50),
+                                  backgroundColor: Colors.blue.shade700,
                                   foregroundColor: Colors.white,
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  elevation: 3,
                                 ),
-                                child: Text('Login', style: GoogleFonts.inter(fontSize: 18)),
+                                child: Text(
+                                  'Login',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
                               ).animate().fadeIn(duration: 300.ms),
                       ],
                     ),

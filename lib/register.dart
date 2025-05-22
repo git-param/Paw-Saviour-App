@@ -10,8 +10,7 @@ class RegisterPageWidget extends StatefulWidget {
 
 class _RegisterPageWidgetState extends State<RegisterPageWidget> {
   final _formKey = GlobalKey<FormState>();
-  final _ngoNameController = TextEditingController();
-  final _registrationNumberController = TextEditingController();
+  final _nameController = TextEditingController();
   final _contactPersonController = TextEditingController();
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
@@ -24,8 +23,7 @@ class _RegisterPageWidgetState extends State<RegisterPageWidget> {
 
   @override
   void dispose() {
-    _ngoNameController.dispose();
-    _registrationNumberController.dispose();
+    _nameController.dispose();
     _contactPersonController.dispose();
     _emailController.dispose();
     _phoneController.dispose();
@@ -43,32 +41,29 @@ class _RegisterPageWidgetState extends State<RegisterPageWidget> {
       });
 
       try {
-        String ngoName = _ngoNameController.text.trim();
+        String name = _nameController.text.trim();
 
-        // Check if an NGO with the same name already exists
         DocumentSnapshot doc = await FirebaseFirestore.instance
             .collection('registration-queries')
-            .doc(ngoName)
+            .doc(name)
             .get();
 
         if (doc.exists) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('An NGO with this name already exists!'),
-              backgroundColor: Colors.red,
+            SnackBar(
+              content: Text('An organization with this name already exists!'),
+              backgroundColor: Colors.red.shade600,
               duration: Duration(seconds: 3),
             ),
           );
           return;
         }
 
-        // Save the registration details to Firestore with ngoName as the document ID
         await FirebaseFirestore.instance
             .collection('registration-queries')
-            .doc(ngoName)
+            .doc(name)
             .set({
-          'ngoName': ngoName,
-          'registrationNumber': _registrationNumberController.text.trim(),
+          'name': name,
           'contactPerson': _contactPersonController.text.trim(),
           'email': _emailController.text.trim(),
           'phone': _phoneController.text.trim(),
@@ -81,19 +76,16 @@ class _RegisterPageWidgetState extends State<RegisterPageWidget> {
           'timestamp': FieldValue.serverTimestamp(),
         });
 
-        // Show success message
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
+          SnackBar(
             content: Text('Registration submitted successfully! Awaiting admin approval.'),
-            backgroundColor: Colors.green,
+            backgroundColor: Colors.green.shade600,
             duration: Duration(seconds: 3),
           ),
         );
 
-        // Reset the form
         setState(() {
-          _ngoNameController.clear();
-          _registrationNumberController.clear();
+          _nameController.clear();
           _contactPersonController.clear();
           _emailController.clear();
           _phoneController.clear();
@@ -104,8 +96,7 @@ class _RegisterPageWidgetState extends State<RegisterPageWidget> {
           _selectedService = null;
         });
 
-        // Navigate back to the home page after a short delay
-        await Future.delayed(const Duration(seconds: 3));
+        await Future.delayed(Duration(seconds: 3));
         if (mounted) {
           Navigator.pop(context);
         }
@@ -113,8 +104,8 @@ class _RegisterPageWidgetState extends State<RegisterPageWidget> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error submitting registration: $e'),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 3),
+            backgroundColor: Colors.red.shade600,
+            duration: Duration(seconds: 3),
           ),
         );
       } finally {
@@ -129,98 +120,94 @@ class _RegisterPageWidgetState extends State<RegisterPageWidget> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('NGO Registration'),
-        backgroundColor: Theme.of(context).primaryColor,
+        title: Text('Organization Registration'),
+        backgroundColor: Colors.teal.shade700,
         elevation: 0,
+        centerTitle: true,
+        titleTextStyle: TextStyle(
+          fontSize: 20,
+          fontWeight: FontWeight.w600,
+          color: Colors.white,
+        ),
       ),
       body: SingleChildScrollView(
         child: Column(
           children: [
-            // Header Section
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 20),
-              color: Theme.of(context).primaryColor,
-              child: const Column(
+              padding: EdgeInsets.symmetric(vertical: 24),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Colors.teal.shade700, Colors.teal.shade500],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                ),
+              ),
+              child: Column(
                 children: [
                   Icon(
                     Icons.group_add,
                     color: Colors.white,
-                    size: 50,
+                    size: 60,
                   ),
-                  SizedBox(height: 10),
+                  SizedBox(height: 12),
                   Text(
-                    'Register Your NGO',
+                    'Register Your Organization',
                     style: TextStyle(
                       color: Colors.white,
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
+                      fontSize: 28,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.5,
                     ),
                   ),
                 ],
               ),
             ),
-            // Form Section
             Padding(
-              padding: const EdgeInsets.all(20.0),
+              padding: EdgeInsets.all(20.0),
               child: Card(
-                elevation: 5,
+                elevation: 8,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(15),
+                  borderRadius: BorderRadius.circular(20),
                 ),
                 child: Padding(
-                  padding: const EdgeInsets.all(20.0),
+                  padding: EdgeInsets.all(20.0),
                   child: Form(
                     key: _formKey,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         TextFormField(
-                          controller: _ngoNameController,
+                          controller: _nameController,
                           decoration: InputDecoration(
-                            labelText: 'NGO Name',
+                            labelText: 'Organization Name',
                             border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(10),
+                              borderRadius: BorderRadius.circular(12),
                             ),
                             filled: true,
-                            fillColor: Colors.grey[100],
+                            fillColor: Colors.grey.shade50,
+                            contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                           ),
                           validator: (value) {
                             if (value == null || value.trim().isEmpty) {
-                              return 'Please enter the NGO name';
+                              return 'Please enter the organization name';
                             }
                             return null;
                           },
                         ),
-                        const SizedBox(height: 16),
-                        TextFormField(
-                          controller: _registrationNumberController,
-                          decoration: InputDecoration(
-                            labelText: 'NGO Registration Number',
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            filled: true,
-                            fillColor: Colors.grey[100],
-                          ),
-                          validator: (value) {
-                            if (value == null || value.trim().isEmpty) {
-                              return 'Please enter the NGO registration number';
-                            }
-                            return null;
-                          },
-                        ),
-                        const SizedBox(height: 16),
+                        SizedBox(height: 16),
                         TextFormField(
                           controller: _contactPersonController,
                           decoration: InputDecoration(
                             labelText: 'Contact Person',
                             border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(10),
+                              borderRadius: BorderRadius.circular(12),
                             ),
                             filled: true,
-                            fillColor: Colors.grey[100],
+                            fillColor: Colors.grey.shade50,
+                            contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                           ),
+                          textCapitalization: TextCapitalization.words,
                           validator: (value) {
                             if (value == null || value.trim().isEmpty) {
                               return 'Please enter the contact person\'s name';
@@ -228,16 +215,17 @@ class _RegisterPageWidgetState extends State<RegisterPageWidget> {
                             return null;
                           },
                         ),
-                        const SizedBox(height: 16),
+                        SizedBox(height: 16),
                         TextFormField(
                           controller: _emailController,
                           decoration: InputDecoration(
                             labelText: 'Email',
                             border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(10),
+                              borderRadius: BorderRadius.circular(12),
                             ),
                             filled: true,
-                            fillColor: Colors.grey[100],
+                            fillColor: Colors.grey.shade50,
+                            contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                           ),
                           keyboardType: TextInputType.emailAddress,
                           validator: (value) {
@@ -250,38 +238,40 @@ class _RegisterPageWidgetState extends State<RegisterPageWidget> {
                             return null;
                           },
                         ),
-                        const SizedBox(height: 16),
+                        SizedBox(height: 16),
                         TextFormField(
                           controller: _phoneController,
                           decoration: InputDecoration(
                             labelText: 'Phone Number',
                             border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(10),
+                              borderRadius: BorderRadius.circular(12),
                             ),
                             filled: true,
-                            fillColor: Colors.grey[100],
+                            fillColor: Colors.grey.shade50,
+                            contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                           ),
                           keyboardType: TextInputType.phone,
                           validator: (value) {
                             if (value == null || value.trim().isEmpty) {
                               return 'Please enter a phone number';
                             }
-                            if (!RegExp(r'^\+?[1-9]\d{1,14}$').hasMatch(value)) {
-                              return 'Please enter a valid phone number';
+                            if (!RegExp(r'^\d{10}$').hasMatch(value.trim())) {
+                              return 'Phone number must be exactly 10 digits';
                             }
                             return null;
                           },
                         ),
-                        const SizedBox(height: 16),
+                        SizedBox(height: 16),
                         TextFormField(
                           controller: _addressController,
                           decoration: InputDecoration(
                             labelText: 'Address',
                             border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(10),
+                              borderRadius: BorderRadius.circular(12),
                             ),
                             filled: true,
-                            fillColor: Colors.grey[100],
+                            fillColor: Colors.grey.shade50,
+                            contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                           ),
                           maxLines: 2,
                           validator: (value) {
@@ -291,16 +281,17 @@ class _RegisterPageWidgetState extends State<RegisterPageWidget> {
                             return null;
                           },
                         ),
-                        const SizedBox(height: 16),
+                        SizedBox(height: 16),
                         TextFormField(
                           controller: _areaOfOperationController,
                           decoration: InputDecoration(
                             labelText: 'Area of Operation (e.g., City, State)',
                             border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(10),
+                              borderRadius: BorderRadius.circular(12),
                             ),
                             filled: true,
-                            fillColor: Colors.grey[100],
+                            fillColor: Colors.grey.shade50,
+                            contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                           ),
                           validator: (value) {
                             if (value == null || value.trim().isEmpty) {
@@ -309,10 +300,10 @@ class _RegisterPageWidgetState extends State<RegisterPageWidget> {
                             return null;
                           },
                         ),
-                        const SizedBox(height: 16),
+                        SizedBox(height: 16),
                         DropdownButtonFormField<String>(
                           value: _selectedService,
-                          items: const [
+                          items: [
                             DropdownMenuItem(value: 'Animal Rescue', child: Text('Animal Rescue')),
                             DropdownMenuItem(value: 'Veterinary Care', child: Text('Veterinary Care')),
                             DropdownMenuItem(value: 'Adoption Services', child: Text('Adoption Services')),
@@ -327,10 +318,11 @@ class _RegisterPageWidgetState extends State<RegisterPageWidget> {
                           decoration: InputDecoration(
                             labelText: 'Services Offered',
                             border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(10),
+                              borderRadius: BorderRadius.circular(12),
                             ),
                             filled: true,
-                            fillColor: Colors.grey[100],
+                            fillColor: Colors.grey.shade50,
+                            contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                           ),
                           validator: (value) {
                             if (value == null) {
@@ -339,16 +331,17 @@ class _RegisterPageWidgetState extends State<RegisterPageWidget> {
                             return null;
                           },
                         ),
-                        const SizedBox(height: 16),
+                        SizedBox(height: 16),
                         TextFormField(
                           controller: _websiteController,
                           decoration: InputDecoration(
                             labelText: 'Website URL (Optional)',
                             border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(10),
+                              borderRadius: BorderRadius.circular(12),
                             ),
                             filled: true,
-                            fillColor: Colors.grey[100],
+                            fillColor: Colors.grey.shade50,
+                            contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                           ),
                           keyboardType: TextInputType.url,
                           validator: (value) {
@@ -360,48 +353,54 @@ class _RegisterPageWidgetState extends State<RegisterPageWidget> {
                             return null;
                           },
                         ),
-                        const SizedBox(height: 16),
+                        SizedBox(height: 16),
                         TextFormField(
                           controller: _descriptionController,
                           decoration: InputDecoration(
-                            labelText: 'Description of NGO (Mission/Purpose)',
+                            labelText: 'Description of Organization (Mission/Purpose)',
                             border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(10),
+                              borderRadius: BorderRadius.circular(12),
                             ),
                             filled: true,
-                            fillColor: Colors.grey[100],
+                            fillColor: Colors.grey.shade50,
+                            contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                           ),
                           maxLines: 3,
                           validator: (value) {
                             if (value == null || value.trim().isEmpty) {
-                              return 'Please enter a description of the NGO';
+                              return 'Please enter a description of the organization';
                             }
                             return null;
                           },
                         ),
-                        const SizedBox(height: 20),
+                        SizedBox(height: 24),
                         Center(
                           child: ElevatedButton(
                             onPressed: _isSubmitting ? null : _submitRegistration,
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: Theme.of(context).primaryColor,
-                              padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+                              backgroundColor: Colors.teal.shade600,
+                              padding: EdgeInsets.symmetric(horizontal: 40, vertical: 16),
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
+                                borderRadius: BorderRadius.circular(12),
                               ),
+                              elevation: 3,
                             ),
                             child: _isSubmitting
-                                ? const SizedBox(
-                                    height: 20,
-                                    width: 20,
+                                ? SizedBox(
+                                    height: 24,
+                                    width: 24,
                                     child: CircularProgressIndicator(
                                       color: Colors.white,
-                                      strokeWidth: 2,
+                                      strokeWidth: 2.5,
                                     ),
                                   )
-                                : const Text(
+                                : Text(
                                     'Submit Registration',
-                                    style: TextStyle(fontSize: 16, color: Colors.white),
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.white,
+                                    ),
                                   ),
                           ),
                         ),

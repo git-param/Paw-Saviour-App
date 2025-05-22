@@ -62,21 +62,19 @@ class _ReportManagementPageState extends State<ReportManagementPage> {
       String newStatus = currentStatus == 'Solved' ? 'Unsolved' : 'Solved';
 
       if (newStatus == 'Solved') {
-        // When marking as Solved, add resolution details and timestamp
         await reportsCollection.doc(docId).update({
           'status': 'Solved',
-          'resolutionComment': 'Case resolved by NGO', // Static for now; could be dynamic via a form
-          'resolvedAt': FieldValue.serverTimestamp(), // Server timestamp
+          'resolutionComment': 'Case resolved by NGO', 
+          'resolvedAt': FieldValue.serverTimestamp(), 
         });
       } 
       else 
       {
-        // When marking as Unsolved, reset by removing details and assignment
         await reportsCollection.doc(docId).update({
           'status': 'Unsolved',
-          'resolutionComment': FieldValue.delete(), // Remove rescue details
-          'resolvedAt': FieldValue.delete(), // Remove resolved timestamp
-          'assignedTo': null, // Clear assignment
+          'resolutionComment': FieldValue.delete(), 
+          'resolvedAt': FieldValue.delete(),
+          'assignedTo': null, 
         });
       }
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Status updated to $newStatus')));
@@ -159,10 +157,10 @@ class _ReportManagementPageState extends State<ReportManagementPage> {
             TextButton(
               onPressed: () async {
                 await _audioPlayer.stop();
-                Navigator.pop(context); // Close dialog and stop the audio
+                Navigator.pop(context); 
                 setState(() {
                   _isPlaying = false;
-                  _isLoadingAudio = false; // Reset state when dialog closes
+                  _isLoadingAudio = false; 
                 });
               },
               child: const Text('Close'),
@@ -172,7 +170,6 @@ class _ReportManagementPageState extends State<ReportManagementPage> {
       ),
     ),
   ).then((_) {
-    // When the dialog is closed, stop the audio if it's playing
     if (_isPlaying) {
       _audioPlayer.stop();
       setState(() {

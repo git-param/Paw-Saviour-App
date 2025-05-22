@@ -18,34 +18,30 @@ class AdminDashboardPageState extends State<AdminDashboardPage> {
     const ReportManagementPage(),
     const AnalyticsDashboard(),
     const NGOAdminPanel(),
-    const NGORegistriesPage(),
-    
   ];
 
-  // Function to handle back button press and prompt for logout confirmation
   Future<bool> _onWillPop() async {
-    // Show a confirmation dialog when back is pressed
     return (await showDialog(
           context: context,
           builder: (context) => AlertDialog(
-            title: const Text('Logout'),
-            content: const Text('Do you want to logout?'),
+            title: Text('Logout'),
+            content: Text('Do you want to logout?'),
             actions: <Widget>[
               TextButton(
-                onPressed: () => Navigator.of(context).pop(false), // No, don't logout
-                child: const Text('No'),
+                onPressed: () => Navigator.of(context).pop(false),
+                child: Text('No'),
               ),
               TextButton(
                 onPressed: () {
-                  Navigator.of(context).pop(true); // Yes, logout
+                  Navigator.of(context).pop(true);
                   Navigator.pushReplacementNamed(context, '/login');
                 },
-                child: const Text('Yes'),
+                child: Text('Yes'),
               ),
             ],
           ),
         )) ??
-        false; // Default to false if dialog is dismissed
+        false;
   }
 
   void _onItemTapped(int index) => setState(() => _selectedIndex = index);
@@ -53,16 +49,16 @@ class AdminDashboardPageState extends State<AdminDashboardPage> {
   @override
   Widget build(BuildContext context) {
     return WillPopScope(
-      onWillPop: _onWillPop, // Intercept back button press
+      onWillPop: _onWillPop,
       child: Scaffold(
         appBar: AppBar(
           title: Text('Admin Dashboard', style: GoogleFonts.inter(color: Colors.white)),
-          backgroundColor: Colors.blue,
-          actions: [
+          backgroundColor: Colors.blue.shade700,
+        actions: [
             Padding(
-              padding: const EdgeInsets.only(right: 20.0), // Adjust the padding to move the button 3px left
+              padding: EdgeInsets.only(right: 20.0),
               child: IconButton(
-                icon: const Icon(Icons.refresh, color: Colors.white),
+                icon: Icon(Icons.refresh, color: Colors.white),
                 onPressed: () => setState(() {}),
               ),
             ),
@@ -79,7 +75,7 @@ class AdminDashboardPageState extends State<AdminDashboardPage> {
             BottomNavigationBarItem(icon: Icon(Icons.group), label: 'NGOs'),
           ],
           currentIndex: _selectedIndex,
-          selectedItemColor: Colors.blue,
+          selectedItemColor: Colors.blue.shade700,
           unselectedItemColor: Colors.grey,
           onTap: _onItemTapped,
         ),

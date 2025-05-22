@@ -1,19 +1,17 @@
-// admin_login.dart
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
-class AdminLoginPage extends StatefulWidget {
+class AdminLoginPage extends StatefulWidget 
+{
   const AdminLoginPage({super.key});
-
-  @override
   State<AdminLoginPage> createState() => _AdminLoginPageState();
 }
 
-class _AdminLoginPageState extends State<AdminLoginPage> {
+class _AdminLoginPageState extends State<AdminLoginPage> 
+{
   final _formKey = GlobalKey<FormState>();
   final _idController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -23,7 +21,8 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
   bool _obscurePassword = true;
 
   @override
-  void dispose() {
+  void dispose() 
+  {
     _idController.dispose();
     _passwordController.dispose();
     _idFocusNode.dispose();
@@ -31,15 +30,15 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
     super.dispose();
   }
 
-  Future<void> _loginAdmin() async {
-    if (!_formKey.currentState!.validate()) return;
-
+  Future<void> _loginAdmin() async 
+  {
+    if (!_formKey.currentState!.validate()) 
+      return;
     setState(() => _isLoading = true);
-
-    try {
+    try 
+    {
       final adminId = _idController.text.trim();
       final password = _passwordController.text.trim();
-
       final docRef = FirebaseFirestore.instance.collection('admins').doc(adminId);
       final docSnapshot = await docRef.get();
 
@@ -47,117 +46,177 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
       if (docSnapshot.data()!['password'] != password) throw Exception('Incorrect password');
 
       Navigator.pushReplacementNamed(context, '/admin_dashboard');
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Login failed: $e')));
-    } finally {
+    } 
+    catch (e) 
+    {
+      ScaffoldMessenger.of(context).showSnackBar
+      (
+        SnackBar
+        (
+          content: Text('Login failed: $e'),
+          backgroundColor: Colors.red,
+          duration: Duration(seconds: 3),
+        ),
+      );
+    } 
+    finally 
+    {
       setState(() => _isLoading = false);
     }
   }
 
-  Future<void> _contactAdminForPassword() async {
-    final Uri emailUri = Uri(
-      scheme: 'mailto',
-      path: 'paramdholakia1@gmail.com',
-      queryParameters: {
-        'subject': 'Paw Saviour: Admin Password Reset Request',
-        'body':
-            'Dear Admin,\n\nI have forgotten my password for the Paw Saviour app. My Admin ID is ${_idController.text.trim()}. Please assist me with resetting my password.\n\nThank you,\n[Your Name]',
-      },
-    );
-
-    if (await canLaunchUrl(emailUri)) {
-      await launchUrl(emailUri);
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not open email client')));
-    }
-  }
-
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.blue,
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24.0),
-            child: Column(
+  Widget build(BuildContext context) 
+  {
+    return Scaffold
+    (
+      backgroundColor: Colors.blue.shade700,
+      body: SafeArea
+      (
+        child: Center
+        (
+          child: SingleChildScrollView
+          (
+            padding: EdgeInsets.symmetric(horizontal: 24.0),
+            child: Column
+            (
               mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.pets, size: 80, color: Colors.white),
-                const SizedBox(height: 16),
-                Text('Admin Login', style: GoogleFonts.inter(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.white)),
-                const SizedBox(height: 8),
-                Text('Login to your admin account', style: GoogleFonts.inter(fontSize: 16, color: Colors.white70)),
-                const SizedBox(height: 32),
-                Container(
-                  padding: const EdgeInsets.all(24.0),
-                  decoration: BoxDecoration(
+              children: 
+              [
+                Icon(Icons.pets, size: 90, color: Colors.white),
+                SizedBox(height: 20),
+                Text
+                (
+                  'Admin Login',
+                  style: GoogleFonts.inter
+                  (
+                    fontSize: 34,
+                    fontWeight: FontWeight.bold,
                     color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Form(
+                ),
+                SizedBox(height: 10),
+                Text
+                (
+                  'Login to your admin account',
+                  style: GoogleFonts.inter
+                  (
+                    fontSize: 16,
+                    color: Colors.white70,
+                  ),
+                ),
+                SizedBox(height: 40),
+                Container
+                (
+                  padding: EdgeInsets.all(24.0),
+                  decoration: BoxDecoration
+                  (
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: 
+                    [
+                      BoxShadow
+                      (
+                        color: Colors.black12,
+                        blurRadius: 10,
+                        offset: Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Form
+                  (
                     key: _formKey,
-                    child: Column(
-                      children: [
-                        TextFormField(
+                    child: Column
+                    (
+                      children: 
+                      [
+                        TextFormField
+                        (
                           controller: _idController,
                           focusNode: _idFocusNode,
-                          decoration: const InputDecoration(
+                          decoration: InputDecoration
+                          (
                             labelText: 'Admin ID',
-                            prefixIcon: Icon(Icons.person),
-                            border: OutlineInputBorder(),
+                            prefixIcon: Icon(Icons.person, color: Colors.blue),
+                            border: OutlineInputBorder
+                            (
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            filled: true,
+                            fillColor: Colors.grey[100],
                           ),
                           keyboardType: TextInputType.text,
                           textInputAction: TextInputAction.next,
                           onFieldSubmitted: (_) => FocusScope.of(context).requestFocus(_passwordFocusNode),
-                          validator: (value) {
+                          validator: (value) 
+                          {
                             if (value == null || value.isEmpty) return 'Please enter your Admin ID';
                             return null;
                           },
                         ),
-                        const SizedBox(height: 16),
-                        TextFormField(
+                        SizedBox(height: 20),
+                        TextFormField
+                        (
                           controller: _passwordController,
                           focusNode: _passwordFocusNode,
-                          decoration: InputDecoration(
+                          decoration: InputDecoration
+                          (
                             labelText: 'Password',
-                            prefixIcon: const Icon(Icons.lock),
-                            suffixIcon: IconButton(
-                              icon: Icon(_obscurePassword ? Icons.visibility : Icons.visibility_off),
+                            prefixIcon: Icon(Icons.lock, color: Colors.blue),
+                            suffixIcon: IconButton
+                            (
+                              icon: Icon
+                              (
+                                _obscurePassword ? Icons.visibility : Icons.visibility_off,
+                                color: Colors.blue,
+                              ),
                               onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
                             ),
-                            border: const OutlineInputBorder(),
+                            border: OutlineInputBorder
+                            (
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            filled: true,
+                            fillColor: Colors.grey[100],
                           ),
                           obscureText: _obscurePassword,
                           textInputAction: TextInputAction.done,
                           onFieldSubmitted: (_) => _loginAdmin(),
-                          validator: (value) {
-                            if (value == null || value.isEmpty) return 'Please enter your password';
-                            if (value.length < 6) return 'Password must be at least 6 characters';
+                          validator: (value)
+                          {
+                            if (value == null || value.isEmpty) 
+                              return 'Please enter your password';
+                            if (value.length < 6) 
+                              return 'Password must be at least 6 characters';
                             return null;
                           },
                         ),
-                        const SizedBox(height: 16),
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: TextButton(
-                            onPressed: _contactAdminForPassword,
-                            child: Text('Forgot Password?', style: GoogleFonts.inter(color: Colors.blue)),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        _isLoading
-                            ? const SpinKitFadingCircle(color: Colors.blue, size: 50)
-                            : ElevatedButton(
+                        SizedBox(height: 20),
+                        _isLoading? SpinKitFadingCircle(color: Colors.blue.shade700, size: 50)
+                            : ElevatedButton
+                            (
                                 onPressed: _loginAdmin,
-                                style: ElevatedButton.styleFrom(
-                                  minimumSize: const Size(double.infinity, 50),
-                                  backgroundColor: Colors.blue,
+                                style: ElevatedButton.styleFrom
+                                (
+                                  minimumSize: Size(double.infinity, 50),
+                                  backgroundColor: Colors.blue.shade700,
                                   foregroundColor: Colors.white,
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                  shape: RoundedRectangleBorder
+                                  (
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  elevation: 3,
                                 ),
-                                child: Text('Login', style: GoogleFonts.inter(fontSize: 18)),
-                              ).animate().fadeIn(duration: 300.ms),
+                                child: Text
+                                (
+                                  'Login',
+                                  style: GoogleFonts.inter
+                                  (
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                            ).animate().fadeIn(duration: 300.ms),
                       ],
                     ),
                   ),
