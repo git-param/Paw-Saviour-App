@@ -1,4 +1,3 @@
-cat << 'EOF' > README.md
 # 🐾 Paw Saviour: Helping Animals in Crisis
 
 **Paw Saviour** is an Android application built using **Flutter and Firebase**, designed to help rescue animals in distress. It empowers citizens to act as first responders by reporting injured or abused animals in real-time. Reports are then routed to relevant NGOs and administrators for quick action.
